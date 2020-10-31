@@ -1,0 +1,84 @@
+---
+title: "'TOne' - RStudio Table Contest"
+author: "Andri Signorell"
+date: "28 10 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## TOne - Flexible 'Table 1' for Groupwise Description
+
+In the context of scientific publications, "Table 1" stands for a table with characteristics of the study population. Typically it consists of descriptive statistics for the used variables, as mean/standard deviation for continuous variables, and proportions for categorical variables. Often, a comparison is made between several groups within the framework of the scientific question. 
+Creating such a table by hand can be very time consuming and there's a need for a flexible function that helps us to solve the task. 
+
+`DescTools::TOne()` is designed  to address 3 degrees of freedom: structure, logic, and format. 
+
+### Structure
+Regarding row/column structure, TOne is simple. The rows contain the names of variables and their statistical descriptions, for the columns a grouping variable can be specified. If necessary, a separate column for the description of the entire population without differentiating between groups can be added. The last column contains the results of a possible statistical test for group differences. The size n of the individual groups can be added as first row. 
+
+### Locic
+The "logic" determines which statistic is used to describe the variables and which test is used to check the group differences. For the description of the data, the mean and the standard deviation for numerical variables and the absolute and relative frequencies for qualitative variables are output by default. However, other functions (such as median/IQR) can be freely defined. Group differences of numerical variables are tested with the Kruskal-Wallis test, qualitative variables with a Chi-square test, or in the case of dichotomy with a Fisher exact test. If this choice does not meet the specific needs, other tests can be configured without restrictions for all the three cases. For dichotomous variables we might want to choose the reference level to be reported (e.g. should percentage for men or for women be output?). There's an argument to determine whether in general to choose the first or the second level. For the sake of clearness the reported level is included in the variable name.
+
+### Format
+Great importance was attached to the free definition of the number formats. The representation of counting variables, numerical variables and p-values for the statistical tests can be freely defined using either R's several format functions or DescTools's integrating function `Format()`.
+
+### Result
+The function returns a character matrix as result, which can easily be subset or combined with other matrices. 
+
+
+```{r simple}
+library(DescTools)
+TOne(x = mtcars[,-2], grp = mtcars$cyl)
+```
+
+
+Now we select the variables to be described using the d.pizza dataset (package DescTools).
+The numeric statistics are changed to the form "mean / sd" with different number of digits.
+The total column is suppressed, the test for numerics is changed to ANOVA and the formats are set for all types of variables (abs = integers, num = numeric values, per = percentages, pval = p-values).
+
+```{r user defined}
+library(DescTools) 
+# save the result object for later output
+(t1 <- TOne(x    = d.pizza[,c("temperature", "driver", "rabate")], 
+    grp   = d.pizza$area, 
+    align = " ", 
+    total = FALSE,
+    
+    FUN = function(x) gettextf("%s / %s (%s)",
+            Format(mean(x, na.rm = TRUE), digits = 1),
+            Format(sd(x, na.rm = TRUE), digits = 3),
+            Format(median(x, na.rm = TRUE), digits = 1)),
+       
+    TEST  = list(
+       num  = list(fun = function(x, g){summary(aov(x ~ g))[[1]][1, "Pr(>F)"]},
+                   lbl = "ANOVA"),
+       cat  = list(fun = function(x, g){chisq.test(table(x, g))$p.val},
+                   lbl = "Chi-Square test"),
+       dich = list(fun = function(x, g){fisher.test(table(x, g))$p.val},
+                   lbl = "Fisher exact test")),
+    
+    fmt = list(abs  = as.fmt(big.mark = " ", digits=0), 
+               num  = as.fmt(big.mark = " ", digits=1), 
+               per  = as.fmt(fmt = "%", digits=1), 
+               pval = as.fmt(fmt = "*", na.form = "   ")) 
+))
+
+# alternative output with kable()
+knitr::kable(t1, align="lrrr", caption = "'Table 1' presentated by kable")
+```
+
+
+As a "Windows only" option, the result can directly be transferred to Word with the function `DescTools::ToWrd()`. Both, font and alignment of the columns are freely definable for the Word table as fucntion arguments. Later fine tuned adaptations are possible as all format options in MS-Word are available through RDCOMClient.
+
+```{r to word}
+# use e.g. the following 
+# wrd <- GetNewWrd()
+# t1 <- TOne(x=, ...)
+# ToWrd(t1, wrd=wrd, font=list(name="Arial narrow", size=8), 
+#       main = "Pizza table")
+
+```
+

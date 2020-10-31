@@ -1,0 +1,10 @@
+name: Publish Document
+title:
+username:
+account: rpubs
+server: rpubs.com
+hostUrl: rpubs.com
+appId: https://api.rpubs.com/api/v1/document/684027/64eb28afda314bee99628f0efa9bfa03
+bundleId: https://api.rpubs.com/api/v1/document/684027/64eb28afda314bee99628f0efa9bfa03
+url: http://rpubs.com/andri/684027
+when: 1604142706.38398
